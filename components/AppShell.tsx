@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpenCheck, ClipboardCheck, KeyRound, LayoutDashboard, LogOut, Settings2, ShieldCheck, UserCog, UsersRound } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
@@ -132,7 +131,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav>{nav.map((item) => {
           const Icon = item.icon;
           const active = item.href === "/" ? path === "/" : path.startsWith(item.href);
-          return <Link key={item.href} href={item.href} className={active ? "active" : ""}><Icon size={18}/>{item.label}</Link>;
+          return <a key={item.href} href={apiPath(item.href)} className={active ? "active" : ""}><Icon size={18}/>{item.label}</a>;
         })}</nav>
         <div className="sidebar-spacer" />
         <div className="role-card">
@@ -142,7 +141,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </select>}
           {mode === "production" && <strong className="role-label">{identity?.isSystemAdmin ? "System administrator" : labels[role]}</strong>}
           <div className="person"><div className="avatar">{userName.replace(/[^A-Za-z]/g, "").slice(0,2).toUpperCase() || "KC"}</div><div><strong>{userName}</strong><span>{userPosition}</span></div></div>
-          {mode === "production" && <div className="account-actions"><Link href="/account/password"><KeyRound size={14}/>Password</Link><button onClick={logout}><LogOut size={14}/>Sign out</button></div>}
+          {mode === "production" && <div className="account-actions"><a href={apiPath("/account/password")}><KeyRound size={14}/>Password</a><button onClick={logout}><LogOut size={14}/>Sign out</button></div>}
         </div>
       </aside>
       <main className="main">
