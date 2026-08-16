@@ -1,4 +1,5 @@
 import { forbidden, mutationOriginAllowed, unauthorized } from "@/lib/auth";
+import { advanceAfterDevelopmentGoal } from "@/lib/lifecycle-store";
 import { getEvaluationAccess } from "@/lib/permissions";
 import { getRequestContext } from "@/lib/request-context";
 import { saveDevelopmentGoal } from "@/lib/server-store";
@@ -29,6 +30,7 @@ export async function PUT(request: Request) {
       reviewOn: String(body.reviewOn ?? ""),
       status: String(body.status ?? "active"),
     });
+    if (String(body.status ?? "active") === "active") await advanceAfterDevelopmentGoal(String(body.sourceEvaluationId), context.actorId);
     return Response.json({ ok: true, goal });
   } catch (error) {
     console.error("Unable to save development goal", error);
