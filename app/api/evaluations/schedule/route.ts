@@ -1,4 +1,6 @@
 import { forbidden, mutationOriginAllowed, unauthorized } from "@/lib/auth";
+import { linkRequirementToEvaluation } from "@/lib/cycle-store";
+import { database } from "@/lib/database";
 import { canAccessStaff, canScheduleTeacher } from "@/lib/permissions";
 import { getRequestContext } from "@/lib/request-context";
 import { scheduleObservation } from "@/lib/scheduling-store";
@@ -18,6 +20,16 @@ export async function PUT(request: Request) {
       const evaluatorAllowed = String(body.evaluatorId) === context.identity.staffId || await canAccessStaff(context.identity, String(body.evaluatorId));
       if (!teacherAllowed || !evaluatorAllowed) return forbidden("You cannot schedule this teacher/evaluator combination");
     }
+    if (body.requirementId) {
+      const requirement = await database().prepare("SELECT teacher_id, framework_id, evaluation_id FROM evaluation_requirements WHERE id = ?")
+        .bind(String(body.requirementId)).first<any>();
+      if (!requirement || requirement.teacher_id !== String(body.teacherId) || requirement.framework_id !== String(body.frameworkId)) {
+        return Response.json({ error: "The selected requirement does not match this teacher and framework" }, { status: 400 });
+      }
+      if (requirement.evaluation_id && requirement.evaluation_id !== body.id) {
+        return Response.json({ error: "This requirement already has an evaluation" }, { status: 409 });
+      }
+    }
     const evaluation = await scheduleObservation({
       actorId: context.actorId,
       id: body.id ? String(body.id) : undefined,
@@ -29,6 +41,7 @@ export async function PUT(request: Request) {
       className: String(body.className),
       subject: String(body.subject),
     });
+    if (body.requirementId) await linkRequirementToEvaluation(String(body.requirementId), String(evaluation.id));
     return Response.json({ ok: true, evaluation });
   } catch (error) {
     console.error("Unable to schedule observation", error);
