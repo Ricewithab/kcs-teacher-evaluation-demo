@@ -1,4 +1,5 @@
 import { forbidden, mutationOriginAllowed, unauthorized } from "@/lib/auth";
+import { advanceAfterReflection } from "@/lib/lifecycle-store";
 import { getEvaluationAccess } from "@/lib/permissions";
 import { getRequestContext } from "@/lib/request-context";
 import { saveReflection } from "@/lib/server-store";
@@ -24,6 +25,7 @@ export async function PUT(request: Request) {
       reflection: String(body.reflection ?? ""),
       nextSteps: String(body.nextSteps ?? ""),
     });
+    await advanceAfterReflection(String(body.evaluationId), context.actorId);
     return Response.json({ ok: true, reflection });
   } catch (error) {
     console.error("Unable to save reflection", error);
