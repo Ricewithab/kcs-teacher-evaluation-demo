@@ -5,6 +5,7 @@ import { apiPath } from "@/lib/paths";
 
 export type PersistedDemoState = {
   framework: any | null;
+  academicYears?: any[];
   staff: any[];
   reportingLines: any[];
   evaluations: any[];
