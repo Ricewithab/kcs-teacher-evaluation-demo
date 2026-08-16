@@ -9,11 +9,18 @@ export function canLeadEvaluations(identity: SessionIdentity) {
   return canAdministerSystem(identity) || identity.systemRole === "division" || identity.systemRole === "manager";
 }
 
-export async function visibleStaffIds(identity: SessionIdentity) {
-  if (canAdministerSystem(identity)) {
-    const result = await database().prepare("SELECT id FROM staff WHERE active = 1").all<{ id: string }>();
-    return new Set((result.results ?? []).map((row) => row.id));
-  }
+async function allActiveStaffIds() {
+  const result = await database().prepare("SELECT id FROM staff WHERE active = 1").all<{ id: string }>();
+  return new Set((result.results ?? []).map((row) => row.id));
+}
+
+/**
+ * Operational scope follows the school reporting hierarchy only.
+ * A technical system administrator keeps whole-system administration rights,
+ * but that override must not turn their personal "My team" dashboard into the whole school.
+ */
+export async function hierarchyStaffIds(identity: SessionIdentity) {
+  if (identity.systemRole === "master") return allActiveStaffIds();
 
   const ids = new Set<string>([identity.staffId]);
   if (identity.systemRole !== "division" && identity.systemRole !== "manager") return ids;
@@ -29,6 +36,15 @@ export async function visibleStaffIds(identity: SessionIdentity) {
   SELECT id FROM descendants`).bind(identity.staffId).all<{ id: string }>();
   for (const row of result.results ?? []) ids.add(row.id);
   return ids;
+}
+
+/**
+ * Authorization scope. Technical system administrators deliberately retain access
+ * to all active staff so they can repair/configure the system when required.
+ */
+export async function visibleStaffIds(identity: SessionIdentity) {
+  if (identity.isSystemAdmin) return allActiveStaffIds();
+  return hierarchyStaffIds(identity);
 }
 
 export async function canAccessStaff(identity: SessionIdentity, staffId: string) {
