@@ -6,6 +6,7 @@ import "./persistence.css";
 import "./production.css";
 import "./production-workflow.css";
 import "./master-admin.css";
+import "./print.css";
 
 export const metadata = {
   title: "KCS Teacher Evaluation",
