@@ -13,7 +13,8 @@ export async function GET(request: Request) {
     const state = context.mode === "production" && context.identity
       ? await getScopedState(context.identity)
       : await getDemoState();
-    const requirements = await listEvaluationRequirements(context.mode === "production" ? context.identity : null);
+    const activeFrameworkId = context.mode === "production" ? state.framework?.id ?? null : null;
+    const requirements = await listEvaluationRequirements(context.mode === "production" ? context.identity : null, activeFrameworkId);
     return Response.json({ ...state, requirements }, { headers: { "cache-control": "no-store" } });
   } catch (error) {
     console.error("Unable to load application state", error);
