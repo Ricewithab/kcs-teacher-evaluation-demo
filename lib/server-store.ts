@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { isProductionMode } from "@/lib/app-mode";
 import { FRAMEWORK, STAFF, demoStatus } from "@/lib/demo-data";
 
 const FRAMEWORK_ID = "framework-2026-27";
@@ -60,9 +61,9 @@ export async function ensureDemoSeeded() {
   const framework = await d1.prepare("SELECT id FROM evaluation_frameworks WHERE id = ?").bind(FRAMEWORK_ID).first();
   if (!framework) {
     await d1.prepare(`INSERT INTO evaluation_frameworks
-      (id, academic_year, observations_required, lesson_plan_required, feedback_due_days, reflection_due_days, development_goal_required, follow_up_required)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-      .bind(FRAMEWORK_ID, FRAMEWORK.academicYear, FRAMEWORK.observationsRequired, 1, FRAMEWORK.feedbackDueDays, FRAMEWORK.reflectionDueDays, 1, 1)
+      (id, academic_year, observations_required, lesson_plan_required, feedback_due_days, reflection_due_days, development_goal_required, follow_up_required, is_active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(FRAMEWORK_ID, FRAMEWORK.academicYear, FRAMEWORK.observationsRequired, 1, FRAMEWORK.feedbackDueDays, FRAMEWORK.reflectionDueDays, 1, 1, isProductionMode() ? 1 : 0, nowIso())
       .run();
 
     const windows = [
@@ -91,6 +92,10 @@ export async function ensureDemoSeeded() {
     });
     await d1.batch(reportingStatements);
   }
+
+  // Production starts with the real staff/hierarchy and a clean framework only.
+  // Fictional showcase evaluations, feedback, reflections and goals must never enter production D1.
+  if (isProductionMode()) return;
 
   const evaluationCount = await d1.prepare("SELECT COUNT(*) AS count FROM evaluations").first<{ count: number }>();
   if (!evaluationCount || Number(evaluationCount.count) === 0) {

@@ -1,5 +1,5 @@
-import { MasterConfiguration } from "@/components/MasterConfiguration";
+import { MasterWorkspace } from "@/components/MasterWorkspace";
 
 export default function MasterPage() {
-  return <MasterConfiguration />;
+  return <MasterWorkspace/>;
 }
