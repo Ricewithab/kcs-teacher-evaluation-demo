@@ -13,6 +13,8 @@ export type PersistedDemoState = {
   reflections: any[];
   developmentGoals: any[];
   auditLog: any[];
+  requirements: any[];
+  access?: { staffIds: string[]; systemRole: string; isSystemAdmin: boolean };
 };
 
 export function usePersistedDemoState() {
@@ -23,7 +25,7 @@ export function usePersistedDemoState() {
     setLoading(true);
     try{
       const response=await fetch(apiPath("/api/state"),{cache:"no-store"});
-      if(!response.ok)throw new Error("Unable to load persisted demo state");
+      if(!response.ok)throw new Error("Unable to load application state");
       setState(await response.json());
       setError(null);
     }catch(cause){
