@@ -1,4 +1,3 @@
-/// <reference types="vinext/types" />
-/// <reference types="@cloudflare/workers-types" />
+import "vinext/types";
 
-// Generated type references for the KCS Teacher Evaluation demo.
+// NOTE: Vinext generates route types during development/build.
