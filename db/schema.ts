@@ -103,3 +103,29 @@ export const auditLog = sqliteTable("audit_log", {
   afterJson: text("after_json"),
   createdAt: text("created_at").notNull(),
 });
+
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id").notNull().unique(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  passwordSalt: text("password_salt").notNull(),
+  passwordIterations: integer("password_iterations").notNull().default(600000),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  mustChangePassword: integer("must_change_password", { mode: "boolean" }).notNull().default(true),
+  isSystemAdmin: integer("is_system_admin", { mode: "boolean" }).notNull().default(false),
+  failedLoginCount: integer("failed_login_count").notNull().default(0),
+  lockedUntil: text("locked_until"),
+  lastLoginAt: text("last_login_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const userSessions = sqliteTable("user_sessions", {
+  id: text("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  userId: text("user_id").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+  lastSeenAt: text("last_seen_at").notNull(),
+});
