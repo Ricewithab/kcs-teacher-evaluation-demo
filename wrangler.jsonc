@@ -26,5 +26,30 @@
       "database_id": "51f60b68-bb43-4f9f-a872-3dc21fcfbbdf",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "env": {
+    "production": {
+      "name": "kcs-teacher-evaluation-production",
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [],
+      "vars": {
+        "APP_MODE": "production"
+      },
+      "d1_databases": [
+        {
+          "binding": "kcs_teacher_evaluation_demo_db",
+          "database_name": "kcs-teacher-evaluation-production-db",
+          "database_id": "f8371d65-6689-4448-823f-120daf019bb2",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "kcs_teacher_evaluation_files",
+          "bucket_name": "kcs-teacher-evaluation-files"
+        }
+      ]
+    }
+  }
 }
