@@ -15,6 +15,13 @@
   "observability": {
     "enabled": true,
     "logs": { "head_sampling_rate": 1 }
-  }
-  // D1 will be bound after `wrangler d1 create kcs-teacher-evaluation-demo-db`.
+  },
+  "d1_databases": [
+    {
+      "binding": "kcs_teacher_evaluation_demo_db",
+      "database_name": "kcs-teacher-evaluation-demo-db",
+      "database_id": "51f60b68-bb43-4f9f-a872-3dc21fcfbbdf",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
