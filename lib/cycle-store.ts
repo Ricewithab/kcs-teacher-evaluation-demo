@@ -15,10 +15,13 @@ function stableRequirementId(frameworkId: string, windowId: string, teacherId: s
 
 export async function syncEvaluationRequirements(frameworkId: string, actorId: string) {
   const d1 = database();
-  const [windowsResult, staffResult] = await Promise.all([
+  const [framework, windowsResult, staffResult] = await Promise.all([
+    d1.prepare("SELECT id, archived_at FROM evaluation_frameworks WHERE id = ?").bind(frameworkId).first<any>(),
     d1.prepare("SELECT id, starts_on, ends_on, required_count FROM evaluation_windows WHERE framework_id = ? ORDER BY starts_on").bind(frameworkId).all<any>(),
     d1.prepare("SELECT id FROM staff WHERE evaluation_eligible = 1 AND active = 1 ORDER BY id").all<{ id: string }>(),
   ]);
+  if (!framework) throw new Error("Evaluation framework not found");
+  if (framework.archived_at) throw new Error("Archived academic years cannot be regenerated");
   const windows = windowsResult.results ?? [];
   const staff = staffResult.results ?? [];
   if (!windows.length) throw new Error("Configure at least one evaluation window before generating requirements");
@@ -118,12 +121,12 @@ function deriveStatus(row: any, now: Date) {
   return { status: "complete", dueAt: null, needsAction: false };
 }
 
-export async function listEvaluationRequirements(identity?: SessionIdentity | null) {
+export async function listEvaluationRequirements(identity?: SessionIdentity | null, frameworkId?: string | null) {
   const result = await database().prepare(`SELECT r.*, w.label AS window_label, w.starts_on, w.ends_on,
     e.scheduled_at, e.evaluator_id, e.status AS evaluation_status, e.ratings_json, e.evidence_json, e.completed_at,
     f.submitted_at AS feedback_submitted_at,
     refl.acknowledged_at AS reflection_submitted_at,
-    ef.feedback_due_days, ef.reflection_due_days, ef.development_goal_required,
+    ef.feedback_due_days, ef.reflection_due_days, ef.development_goal_required, ef.academic_year,
     (SELECT COUNT(*) FROM development_goals g WHERE g.source_evaluation_id = e.id AND g.status = 'active') AS goal_count
     FROM evaluation_requirements r
     JOIN evaluation_windows w ON w.id = r.window_id
@@ -131,7 +134,9 @@ export async function listEvaluationRequirements(identity?: SessionIdentity | nu
     LEFT JOIN evaluations e ON e.id = r.evaluation_id
     LEFT JOIN feedback f ON f.evaluation_id = e.id
     LEFT JOIN reflections refl ON refl.evaluation_id = e.id
-    ORDER BY w.starts_on, r.teacher_id, r.sequence_number`).all<any>();
+    WHERE (? IS NULL OR r.framework_id = ?)
+    ORDER BY w.starts_on, r.teacher_id, r.sequence_number`)
+    .bind(frameworkId ?? null, frameworkId ?? null).all<any>();
   let rows = result.results ?? [];
   if (identity) {
     const visible = await visibleStaffIds(identity);
