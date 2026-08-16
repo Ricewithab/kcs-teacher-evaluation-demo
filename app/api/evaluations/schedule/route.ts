@@ -40,11 +40,13 @@ export async function PUT(request: Request) {
       scheduledAt: String(body.scheduledAt),
       className: String(body.className),
       subject: String(body.subject),
+      evaluationType: body.evaluationType ? String(body.evaluationType) : null,
     });
     if (body.requirementId) await linkRequirementToEvaluation(String(body.requirementId), String(evaluation.id));
     return Response.json({ ok: true, evaluation });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to schedule observation";
     console.error("Unable to schedule observation", error);
-    return Response.json({ error: "Unable to schedule observation" }, { status: 500 });
+    return Response.json({ error: message }, { status: 500 });
   }
 }
