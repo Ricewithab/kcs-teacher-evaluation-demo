@@ -120,7 +120,7 @@ function deriveStatus(row: any, now: Date) {
 
 export async function listEvaluationRequirements(identity?: SessionIdentity | null) {
   const result = await database().prepare(`SELECT r.*, w.label AS window_label, w.starts_on, w.ends_on,
-    e.scheduled_at, e.status AS evaluation_status, e.ratings_json, e.evidence_json, e.completed_at,
+    e.scheduled_at, e.evaluator_id, e.status AS evaluation_status, e.ratings_json, e.evidence_json, e.completed_at,
     f.submitted_at AS feedback_submitted_at,
     refl.acknowledged_at AS reflection_submitted_at,
     ef.feedback_due_days, ef.reflection_due_days, ef.development_goal_required,
