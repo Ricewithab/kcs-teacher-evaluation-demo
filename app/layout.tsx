@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
 import "./globals.css";
+import "./evaluation-record.css";
 
 export const metadata = {
   title: "KCS Teacher Evaluation Demo",
