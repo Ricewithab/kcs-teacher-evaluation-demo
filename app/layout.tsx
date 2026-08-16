@@ -3,10 +3,11 @@ import { AppShell } from "@/components/AppShell";
 import "./globals.css";
 import "./evaluation-record.css";
 import "./persistence.css";
+import "./production.css";
 
 export const metadata = {
-  title: "KCS Teacher Evaluation Demo",
-  description: "Teacher evaluation, development and lesson-planning prototype for KCS Chengdu.",
+  title: "KCS Teacher Evaluation",
+  description: "Connected teacher evaluation, development and lesson planning for KCS Chengdu.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
