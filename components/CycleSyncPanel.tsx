@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { RefreshCw, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { apiPath } from "@/lib/paths";
@@ -27,7 +26,7 @@ export function CycleSyncPanel() {
       const response = await fetch(apiPath("/api/cycle/sync"), {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ frameworkId, actorId: "s1" }),
+        body: JSON.stringify({ frameworkId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Unable to generate requirements");
@@ -47,7 +46,7 @@ export function CycleSyncPanel() {
       <div className="cycle-sync-stats"><div><span>Eligible staff</span><strong>{eligibleStaff}</strong></div><div><span>Expected slots</span><strong>{expected}</strong></div><div><span>Generated slots</span><strong>{requirements}</strong></div></div>
       <p className="source-note">Regenerating is safe: existing scheduled/completed evaluations remain linked. New requirements are added and unused obsolete slots are removed.</p>
       {message && <div className="cycle-message">{message}</div>}
-      <div className="button-row"><button className="button primary" onClick={sync} disabled={syncing || !frameworkId}><RefreshCw size={15}/>{syncing ? "Generating…" : requirements ? "Re-sync annual requirements" : "Generate annual requirements"}</button>{mode === "production" && <Link className="button secondary" href="/admin/users">Manage staff accounts</Link>}</div>
+      <div className="button-row"><button className="button primary" onClick={sync} disabled={syncing || !frameworkId}><RefreshCw size={15}/>{syncing ? "Generating…" : requirements ? "Re-sync annual requirements" : "Generate annual requirements"}</button>{mode === "production" && <a className="button secondary" href={apiPath("/admin/users")}>Manage staff accounts</a>}</div>
     </section>
   </div>;
 }
