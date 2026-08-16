@@ -1,7 +1,8 @@
 import { forbidden, mutationOriginAllowed, unauthorized } from "@/lib/auth";
+import { saveFrameworkById } from "@/lib/framework-store";
 import { canManageFramework } from "@/lib/permissions";
 import { getRequestContext } from "@/lib/request-context";
-import { saveFramework } from "@/lib/server-store";
+import { FRAMEWORK_ID, saveFramework } from "@/lib/server-store";
 
 export async function PUT(request: Request) {
   try {
@@ -11,7 +12,7 @@ export async function PUT(request: Request) {
     if (!context) return unauthorized();
     if (context.mode === "production" && (!context.identity || !canManageFramework(context.identity))) return forbidden();
 
-    const saved = await saveFramework({
+    const common = {
       actorId: context.actorId,
       observationsRequired: Math.max(1, Number(body.observationsRequired ?? 3)),
       lessonPlanRequired: Boolean(body.lessonPlanRequired),
@@ -19,10 +20,14 @@ export async function PUT(request: Request) {
       reflectionDueDays: Math.max(1, Number(body.reflectionDueDays ?? 5)),
       developmentGoalRequired: Boolean(body.developmentGoalRequired),
       followUpRequired: Boolean(body.followUpRequired),
-    });
-    return Response.json({ ok: true, framework: saved });
+    };
+    const saved = context.mode === "production"
+      ? await saveFrameworkById({ ...common, frameworkId: String(body.frameworkId ?? "") })
+      : await saveFramework(common);
+    return Response.json({ ok: true, framework: saved, frameworkId: context.mode === "production" ? body.frameworkId : FRAMEWORK_ID });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to save framework";
     console.error("Unable to save framework", error);
-    return Response.json({ error: "Unable to save framework" }, { status: 500 });
+    return Response.json({ error: message }, { status: 500 });
   }
 }
