@@ -1,4 +1,5 @@
 import { forbidden, mutationOriginAllowed, unauthorized } from "@/lib/auth";
+import { markFeedbackSubmitted } from "@/lib/lifecycle-store";
 import { getEvaluationAccess } from "@/lib/permissions";
 import { getRequestContext } from "@/lib/request-context";
 import { saveFeedback } from "@/lib/server-store";
@@ -22,6 +23,7 @@ export async function PUT(request: Request) {
       developmentAreas: String(body.developmentAreas ?? ""),
       summary: body.summary ? String(body.summary) : undefined,
     });
+    if (body.submit !== false) await markFeedbackSubmitted(String(body.evaluationId), context.actorId);
     return Response.json({ ok: true, feedback });
   } catch (error) {
     console.error("Unable to save feedback", error);
