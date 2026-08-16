@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { BookOpenCheck, ClipboardCheck, KeyRound, LayoutDashboard, LogOut, Settings2, ShieldCheck, UserCog, UsersRound } from "lucide-react";
+import { BellRing, BookOpenCheck, ClipboardCheck, KeyRound, LayoutDashboard, LogOut, Network, Settings2, ShieldCheck, UserCog, UsersRound } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { ROLE_USERS, type SystemRole } from "@/lib/demo-data";
 import type { AppMode, SessionIdentity, SessionResponse } from "@/lib/auth-types";
@@ -103,15 +103,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const nav = useMemo(() => {
     const items = [
       { href: "/", label: "Overview", icon: LayoutDashboard },
+      { href: "/actions", label: "Action Centre", icon: BellRing },
       { href: "/evaluations", label: "Evaluations", icon: ClipboardCheck },
       { href: "/lesson-planning", label: "Lesson Planning", icon: BookOpenCheck },
     ];
     if (isMaster || (mode === "demo" && (role === "manager" || role === "division"))) {
       items.push({ href: "/master", label: isMaster ? "Master Management" : "System Preview", icon: Settings2 });
     }
-    if (mode === "production" && isMaster) items.push({ href: "/admin/users", label: "Accounts", icon: UserCog });
+    if (mode === "production" && identity?.isSystemAdmin) {
+      items.push({ href: "/admin/staff", label: "Staff & Hierarchy", icon: Network });
+      items.push({ href: "/admin/users", label: "Accounts", icon: UserCog });
+    }
     return items;
-  }, [isMaster, mode, role]);
+  }, [identity?.isSystemAdmin, isMaster, mode, role]);
 
   const providers = (content: React.ReactNode) => <SessionContext.Provider value={{ mode, user: identity, loading, refresh: refreshSession }}>
     <RoleContext.Provider value={{ role, setRole }}>{content}</RoleContext.Provider>
