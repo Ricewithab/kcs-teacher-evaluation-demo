@@ -1,8 +1,9 @@
 "use client";
 
 import { BookOpenCheck, ChevronDown, ChevronUp, Plus, Save, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MATH_OUTCOMES, ROLE_USERS } from "@/lib/demo-data";
+import { apiPath } from "@/lib/paths";
 
 type Phase={id:number;name:string;minutes:number;teacher:string;students:string;assessment:string};
 const initial:Phase[]=[
@@ -13,20 +14,71 @@ const initial:Phase[]=[
  {id:5,name:"Plenary",minutes:8,teacher:"Revisit the success criteria and collect one final contextual interpretation.",students:"Complete an exit ticket explaining a gradient in context.",assessment:"Exit ticket"}
 ];
 
+const PLAN_ID="demo-plan-yidi-gradient";
+const EVALUATION_ID="demo-eval-yidi-observation-2";
+
 export function LessonPlannerPreview(){
  const teacher=ROLE_USERS.teacher;
  const [title,setTitle]=useState("Understanding gradient in straight-line graphs");
+ const [className,setClassName]=useState("Grade 10 Mathematics");
+ const [duration,setDuration]=useState(70);
+ const [priorLearning,setPriorLearning]=useState("Students can plot coordinates and interpret basic linear graphs.");
+ const [successCriteria,setSuccessCriteria]=useState("Students can calculate gradient correctly, explain the sign of a gradient, and interpret gradient as a rate of change.");
+ const [keyVocabulary,setKeyVocabulary]=useState("gradient, slope, coordinates, rate of change, change in x, change in y");
+ const [keyQuestions,setKeyQuestions]=useState("What does the sign of a gradient tell us? How can two lines have the same gradient? What does gradient mean in this context?");
+ const [differentiation,setDifferentiation]=useState("Support: pre-labelled coordinate grids and scaffolded formula. Extension: missing-coordinate and equation-of-line problems.");
+ const [misconceptions,setMisconceptions]=useState("Reversing x/y changes; losing negative signs; treating steepness visually without calculating.");
+ const [resources,setResources]=useState("Mini-whiteboards, coordinate-grid worksheet, graphing display, exit ticket.");
  const [selected,setSelected]=useState([0,1,2]);
  const [phases,setPhases]=useState(initial);
  const [saved,setSaved]=useState(false);
+ const [saving,setSaving]=useState(false);
+ const [loadedFromD1,setLoadedFromD1]=useState(false);
  const toggle=(i:number)=>setSelected((v)=>v.includes(i)?v.filter(x=>x!==i):[...v,i]);
  const move=(i:number,d:number)=>{const next=[...phases];const j=i+d;if(j<0||j>=next.length)return;[next[i],next[j]]=[next[j],next[i]];setPhases(next)};
- return <div className="page"><header className="page-head"><div><span className="eyebrow">Lesson planning preview</span><h1>General lesson-plan creator</h1><p>A subject-neutral planner linked directly to teacher evaluation. Mathematics is the demo subject; curriculum management comes later.</p></div><button className="button primary" onClick={()=>setSaved(true)}><Save size={15}/>{saved?"Saved for demo":"Save as complete"}</button></header>
-  <section className="planner-banner"><BookOpenCheck/><div><strong>Observation-linked lesson plan</strong><span>This plan will be available beside the evaluator's observation form.</span></div><b>Cambridge IGCSE Mathematics 0580</b></section>
-  <section className="grid planner-grid"><div className="stack"><article className="card form-card"><div className="card-title"><div><h2>Lesson information</h2><p>Designed to work for any subject.</p></div></div><div className="form-grid"><label>Teacher<input value={teacher.name} readOnly/></label><label>Subject<input value="IGCSE Mathematics" readOnly/></label><label>Class<input defaultValue="Grade 10 Mathematics"/></label><label>Duration<input defaultValue="70 minutes"/></label><label className="wide">Lesson title<input value={title} onChange={e=>setTitle(e.target.value)}/></label><label className="wide">Prior learning<textarea defaultValue="Students can plot coordinates and interpret basic linear graphs."/></label></div></article>
-  <article className="card"><div className="card-title"><div><h2>Learning outcomes</h2><p>Select relevant outcomes for this lesson.</p></div></div><div className="outcome-list">{MATH_OUTCOMES.map((outcome,i)=><button key={outcome} className={selected.includes(i)?"selected":""} onClick={()=>toggle(i)}><span>{selected.includes(i)?"✓":""}</span>{outcome}</button>)}</div><p className="source-note">Demo outcomes are paraphrased from Cambridge IGCSE Mathematics 0580 coordinate-geometry content. <a href="https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-igcse-mathematics-0580/" target="_blank" rel="noreferrer">Cambridge syllabus overview ↗</a></p></article>
-  <article className="card form-card"><div className="card-title"><div><h2>Teaching & learning</h2><p>Planning prompts aligned with good classroom practice.</p></div></div><div className="form-grid"><label className="wide">Success criteria<textarea defaultValue="Students can calculate gradient correctly, explain the sign of a gradient, and interpret gradient as a rate of change."/></label><label>Key vocabulary<textarea defaultValue="gradient, slope, coordinates, rate of change, change in x, change in y"/></label><label>Key questions<textarea defaultValue="What does the sign of a gradient tell us? How can two lines have the same gradient? What does gradient mean in this context?"/></label><label>Differentiation / adaptations<textarea defaultValue="Support: pre-labelled coordinate grids and scaffolded formula. Extension: missing-coordinate and equation-of-line problems."/></label><label>Anticipated misconceptions<textarea defaultValue="Reversing x/y changes; losing negative signs; treating steepness visually without calculating."/></label><label className="wide">Resources<textarea defaultValue="Mini-whiteboards, coordinate-grid worksheet, graphing display, exit ticket."/></label></div></article></div>
-  <aside className="card observation-panel"><span className="eyebrow">Evaluator preview</span><h2>What the observer sees</h2><p>During the observation, this summary sits beside the digital evaluation form.</p><Preview label="Learning intention" value={title}/><Preview label="Selected outcomes" value={`${selected.length} outcomes`}/><Preview label="Formative assessment" value="Mini-whiteboards · hinge question · exit ticket"/><Preview label="Differentiation" value="Support scaffold + extension problems"/><Preview label="Previous development goal" value="Formative checks before independent practice"/></aside></section>
+
+ useEffect(()=>{
+  let active=true;
+  fetch(apiPath("/api/state"),{cache:"no-store"}).then(async response=>{if(!response.ok)throw new Error("Unable to load plan");return response.json()}).then(data=>{
+   if(!active)return;
+   const plan=Array.isArray(data.lessonPlans)?data.lessonPlans.find((item:any)=>item.id===PLAN_ID):null;
+   if(plan){
+    setTitle(plan.lesson_title??title);setClassName(plan.class_name??className);
+    const payload=plan.payload??{};
+    if(Number(payload.durationMinutes))setDuration(Number(payload.durationMinutes));
+    if(Array.isArray(payload.outcomes))setSelected(payload.outcomes);
+    if(payload.priorLearning)setPriorLearning(payload.priorLearning);
+    if(payload.successCriteria)setSuccessCriteria(payload.successCriteria);
+    if(payload.keyVocabulary)setKeyVocabulary(payload.keyVocabulary);
+    if(payload.keyQuestions)setKeyQuestions(payload.keyQuestions);
+    if(payload.differentiation)setDifferentiation(payload.differentiation);
+    if(payload.misconceptions)setMisconceptions(payload.misconceptions);
+    if(payload.resources)setResources(payload.resources);
+    if(Array.isArray(payload.phases)&&payload.phases.length)setPhases(payload.phases);
+   }
+   setLoadedFromD1(true);
+  }).catch(error=>console.error(error));
+  return()=>{active=false};
+ // The initial values are intentional fallbacks if D1 is unavailable.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[]);
+
+ async function savePlan(){
+  setSaving(true);setSaved(false);
+  try{
+   const response=await fetch(apiPath("/api/lesson-plans"),{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({actorId:teacher.id,id:PLAN_ID,teacherId:teacher.id,evaluationId:EVALUATION_ID,subject:"IGCSE Mathematics",className,lessonTitle:title,status:"complete",payload:{curriculum:"Cambridge IGCSE Mathematics 0580",durationMinutes:duration,outcomes:selected,priorLearning,successCriteria,keyVocabulary,keyQuestions,differentiation,misconceptions,resources,phases}})});
+   if(!response.ok)throw new Error("Unable to save lesson plan");
+   setSaved(true);
+  }catch(error){console.error(error);window.alert("The lesson plan could not be saved.")}
+  finally{setSaving(false)}
+ }
+
+ return <div className="page"><header className="page-head"><div><span className="eyebrow">Lesson planning preview</span><h1>General lesson-plan creator</h1><p>A subject-neutral planner linked directly to teacher evaluation. Mathematics is the demo subject; curriculum management comes later.</p></div><button className="button primary" onClick={savePlan} disabled={saving}><Save size={15}/>{saving?"Saving…":saved?"Saved online":"Save as complete"}</button></header>
+  <section className="planner-banner"><BookOpenCheck/><div><strong>{loadedFromD1?"Observation-linked plan · stored in D1":"Loading stored lesson plan…"}</strong><span>This plan is retained online and available beside the evaluator's observation form.</span></div><b>Cambridge IGCSE Mathematics 0580</b></section>
+  <section className="grid planner-grid"><div className="stack"><article className="card form-card"><div className="card-title"><div><h2>Lesson information</h2><p>Designed to work for any subject.</p></div></div><div className="form-grid"><label>Teacher<input value={teacher.name} readOnly/></label><label>Subject<input value="IGCSE Mathematics" readOnly/></label><label>Class<input value={className} onChange={e=>setClassName(e.target.value)}/></label><label>Duration<input type="number" min="1" value={duration} onChange={e=>setDuration(Number(e.target.value))}/></label><label className="wide">Lesson title<input value={title} onChange={e=>setTitle(e.target.value)}/></label><label className="wide">Prior learning<textarea value={priorLearning} onChange={e=>setPriorLearning(e.target.value)}/></label></div></article>
+  <article className="card"><div className="card-title"><div><h2>Learning outcomes</h2><p>Select relevant outcomes for this lesson.</p></div></div><div className="outcome-list">{MATH_OUTCOMES.map((outcome,i)=><button type="button" key={outcome} className={selected.includes(i)?"selected":""} onClick={()=>toggle(i)}><span>{selected.includes(i)?"✓":""}</span>{outcome}</button>)}</div><p className="source-note">Demo outcomes are paraphrased from Cambridge IGCSE Mathematics 0580 coordinate-geometry content. <a href="https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-igcse-mathematics-0580/" target="_blank" rel="noreferrer">Cambridge syllabus overview ↗</a></p></article>
+  <article className="card form-card"><div className="card-title"><div><h2>Teaching & learning</h2><p>Planning prompts aligned with good classroom practice.</p></div></div><div className="form-grid"><label className="wide">Success criteria<textarea value={successCriteria} onChange={e=>setSuccessCriteria(e.target.value)}/></label><label>Key vocabulary<textarea value={keyVocabulary} onChange={e=>setKeyVocabulary(e.target.value)}/></label><label>Key questions<textarea value={keyQuestions} onChange={e=>setKeyQuestions(e.target.value)}/></label><label>Differentiation / adaptations<textarea value={differentiation} onChange={e=>setDifferentiation(e.target.value)}/></label><label>Anticipated misconceptions<textarea value={misconceptions} onChange={e=>setMisconceptions(e.target.value)}/></label><label className="wide">Resources<textarea value={resources} onChange={e=>setResources(e.target.value)}/></label></div></article></div>
+  <aside className="card observation-panel"><span className="eyebrow">Evaluator preview</span><h2>What the observer sees</h2><p>During the observation, this summary sits beside the digital evaluation form.</p><Preview label="Learning intention" value={title}/><Preview label="Selected outcomes" value={`${selected.length} outcomes`}/><Preview label="Formative assessment" value={phases.map(p=>p.assessment).filter(Boolean).join(" · ")}/><Preview label="Differentiation" value={differentiation}/><Preview label="Previous development goal" value="Formative checks before independent practice"/></aside></section>
   <section className="card"><div className="card-title split"><div><h2>Lesson sequence</h2><p>Flexible phases can be added, renamed, reordered or removed.</p></div><button className="button secondary" onClick={()=>setPhases(v=>[...v,{id:Date.now(),name:"New phase",minutes:10,teacher:"",students:"",assessment:""}])}><Plus size={15}/>Add phase</button></div><div className="phase-list">{phases.map((phase,i)=><article key={phase.id}><div className="phase-top"><input value={phase.name} onChange={e=>setPhases(v=>v.map(x=>x.id===phase.id?{...x,name:e.target.value}:x))}/><label><input type="number" value={phase.minutes} onChange={e=>setPhases(v=>v.map(x=>x.id===phase.id?{...x,minutes:Number(e.target.value)}:x))}/> min</label><button onClick={()=>move(i,-1)} disabled={i===0}><ChevronUp/></button><button onClick={()=>move(i,1)} disabled={i===phases.length-1}><ChevronDown/></button><button onClick={()=>setPhases(v=>v.filter(x=>x.id!==phase.id))}><Trash2/></button></div><div className="phase-fields"><label>Teacher activity<textarea value={phase.teacher} onChange={e=>setPhases(v=>v.map(x=>x.id===phase.id?{...x,teacher:e.target.value}:x))}/></label><label>Student activity<textarea value={phase.students} onChange={e=>setPhases(v=>v.map(x=>x.id===phase.id?{...x,students:e.target.value}:x))}/></label><label>Assessment / check<textarea value={phase.assessment} onChange={e=>setPhases(v=>v.map(x=>x.id===phase.id?{...x,assessment:e.target.value}:x))}/></label></div></article>)}</div></section>
  </div>
 }
