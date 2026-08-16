@@ -1,0 +1,53 @@
+"use client";
+
+import Link from "next/link";
+import { AlertTriangle, CalendarClock, CheckCircle2, ClipboardCheck, FileText, Goal, MessageSquareText } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useAppSession } from "@/components/AppShell";
+import { apiPath } from "@/lib/paths";
+import { usePersistedDemoState } from "@/lib/use-demo-state";
+
+const labels:Record<string,string>={complete:"Complete",waived:"Waived",scheduled:"Scheduled",due:"Schedule",overdue:"Overdue",feedback_due:"Feedback due",feedback_overdue:"Feedback overdue",reflection_due:"Reflection due",reflection_overdue:"Reflection overdue",development_due:"Development goal due",not_yet_due:"Not yet due"};
+const actionable=new Set(["due","overdue"]);
+
+function label(value:string){return labels[value]??value.replaceAll("_"," ")}
+function formatDate(value?:string|null){if(!value)return "—";const date=new Date(value.length===10?`${value}T00:00:00`:value);return Number.isNaN(date.getTime())?value:date.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})}
+
+export function ProductionEvaluationCenter(){
+ const {user}=useAppSession();
+ const {state,loading,error,refresh}=usePersistedDemoState();
+ const [selectedRequirement,setSelectedRequirement]=useState("");
+ const [scheduledAt,setScheduledAt]=useState("");
+ const [className,setClassName]=useState("");
+ const [subject,setSubject]=useState("");
+ const [scheduling,setScheduling]=useState(false);
+ const [message,setMessage]=useState("");
+ const canSchedule=Boolean(user&&["master","division","manager"].includes(user.systemRole)||user?.isSystemAdmin);
+ const requirements=state?.requirements??[];
+ const staff=state?.staff??[];
+ const schedulable=useMemo(()=>requirements.filter((req:any)=>actionable.has(req.status)&&!req.evaluation_id),[requirements]);
+ const selected=schedulable.find((req:any)=>req.id===selectedRequirement)??schedulable[0];
+ const teacher=selected?staff.find((person:any)=>person.id===selected.teacher_id):null;
+
+ async function schedule(){
+  if(!user||!selected||!scheduledAt||!className.trim()||!subject.trim())return setMessage("Select a requirement and enter date/time, class and subject.");
+  setScheduling(true);setMessage("");
+  try{
+   const response=await fetch(apiPath("/api/evaluations/schedule"),{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({requirementId:selected.id,teacherId:selected.teacher_id,evaluatorId:user.staffId,frameworkId:selected.framework_id,windowId:selected.window_id,scheduledAt,className:className.trim(),subject:subject.trim()})});
+   const data=await response.json();if(!response.ok)throw new Error(data.error??"Unable to schedule observation");
+   setMessage(`Observation scheduled for ${teacher?.name??"teacher"}.`);setSelectedRequirement("");setScheduledAt("");setClassName("");setSubject("");await refresh();
+  }catch(caught){setMessage(caught instanceof Error?caught.message:"Unable to schedule observation")}
+  finally{setScheduling(false)}
+ }
+
+ if(loading)return <div className="page"><div className="card empty-state">Loading evaluation requirements…</div></div>;
+ if(error||!state||!user)return <div className="page"><div className="card locked"><AlertTriangle/><h2>Unable to load evaluations</h2><p>Refresh the page or contact the system administrator.</p></div></div>;
+ const myRequirements=user.systemRole==="teacher"||user.systemRole==="staff"?requirements.filter((req:any)=>req.teacher_id===user.staffId):requirements;
+ return <div className="page">
+  <header className="page-head"><div><span className="eyebrow">Evaluation workflow</span><h1>{user.systemRole==="teacher"?"My evaluations":"Evaluation centre"}</h1><p>Schedule → prepare → observe → feedback → reflect → develop → follow up.</p></div></header>
+  <section className="workflow"><Step icon={<CalendarClock/>} label="Schedule"/><Step icon={<FileText/>} label="Lesson plan"/><Step icon={<ClipboardCheck/>} label="Observe"/><Step icon={<MessageSquareText/>} label="Feedback"/><Step icon={<CheckCircle2/>} label="Reflection"/><Step icon={<Goal/>} label="Develop"/></section>
+  {canSchedule&&<section className="card form-card"><div className="card-title"><div><h2>Schedule a required observation</h2><p>Scheduling is tied to a published annual requirement, so no teacher can accidentally be lost from the cycle.</p></div><CalendarClock/></div>{schedulable.length?<><div className="form-grid"><label className="wide">Required observation<select value={selectedRequirement||selected?.id||""} onChange={event=>setSelectedRequirement(event.target.value)}>{schedulable.map((req:any)=>{const person=staff.find((item:any)=>item.id===req.teacher_id);return <option key={req.id} value={req.id}>{person?.name??req.teacher_id} · {req.window_label} · due {formatDate(req.due_on)}</option>})}</select></label><label>Teacher<input value={teacher?.name??""} readOnly/></label><label>Evaluator<input value={user.name} readOnly/></label><label>Date & time<input type="datetime-local" value={scheduledAt} onChange={event=>setScheduledAt(event.target.value)}/></label><label>Class<input value={className} onChange={event=>setClassName(event.target.value)} placeholder="e.g. Grade 9 English"/></label><label className="wide">Subject / lesson context<input value={subject} onChange={event=>setSubject(event.target.value)} placeholder="e.g. English · persuasive writing"/></label></div><div className="button-row"><button className="button primary" onClick={schedule} disabled={scheduling}>{scheduling?"Scheduling…":"Schedule observation"}</button>{message&&<span className="source-note">{message}</span>}</div></>:<div className="empty-state">There are no unscheduled requirements currently due in your scope.</div>}</section>}
+  <section className="card"><div className="card-title"><div><h2>{canSchedule?"Evaluation requirements":"My annual record"}</h2><p>{state.framework?.academicYear??"Current academic year"} · status is calculated automatically from the connected record.</p></div></div><div className="requirement-centre-table head"><span>Teacher</span><span>Requirement</span><span>Due</span><span>Status</span><span>Record</span></div>{myRequirements.map((req:any)=>{const person=staff.find((item:any)=>item.id===req.teacher_id);return <div className="requirement-centre-table" key={req.id}><span><strong>{person?.name??req.teacher_id}</strong><small>{person?.department??""}</small></span><span><strong>{req.window_label}</strong><small>Requirement {req.sequence_number}</small></span><span>{formatDate(req.due_on)}</span><span><b className={`cycle-status ${req.status}`}>{label(req.status)}</b>{req.dueAt&&req.status!=="not_yet_due"&&<small>{formatDate(req.dueAt)}</small>}</span><span>{req.evaluation_id?<Link className="inline-link" href={`/evaluations/${req.evaluation_id}`}>Open record</Link>:actionable.has(req.status)&&canSchedule?<span className="attention-text">Needs scheduling</span>:<span className="muted">Not created</span>}</span></div>})}</section>
+ </div>
+}
+function Step({icon,label}:{icon:React.ReactNode;label:string}){return <div>{icon}<span>{label}</span></div>}
