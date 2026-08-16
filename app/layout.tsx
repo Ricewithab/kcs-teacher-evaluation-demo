@@ -10,6 +10,7 @@ import "./print.css";
 import "./attachments.css";
 import "./academic-years.css";
 import "./staff-profile.css";
+import "./schedule-actions.css";
 
 export const metadata = {
   title: "KCS Teacher Evaluation",
