@@ -1,10 +1,18 @@
+import { forbidden, mutationOriginAllowed, unauthorized } from "@/lib/auth";
+import { canManageFramework } from "@/lib/permissions";
+import { getRequestContext } from "@/lib/request-context";
 import { saveFramework } from "@/lib/server-store";
 
 export async function PUT(request: Request) {
   try {
+    if (!mutationOriginAllowed(request)) return forbidden("Invalid request origin");
     const body = await request.json();
+    const context = await getRequestContext(request, String(body.actorId ?? "s1"));
+    if (!context) return unauthorized();
+    if (context.mode === "production" && (!context.identity || !canManageFramework(context.identity))) return forbidden();
+
     const saved = await saveFramework({
-      actorId: String(body.actorId ?? "s1"),
+      actorId: context.actorId,
       observationsRequired: Math.max(1, Number(body.observationsRequired ?? 3)),
       lessonPlanRequired: Boolean(body.lessonPlanRequired),
       feedbackDueDays: Math.max(1, Number(body.feedbackDueDays ?? 3)),
