@@ -5,7 +5,10 @@ import type { SessionIdentity, SystemAccessRole } from "@/lib/auth-types";
 
 const COOKIE_NAME = "kcs_teacher_eval_session";
 const SESSION_SECONDS = 60 * 60 * 12;
-const PASSWORD_ITERATIONS = 600_000;
+// Cloudflare Workers Web Crypto currently rejects PBKDF2 iteration counts above 100,000.
+// The iteration count is stored per account, so a future school-server deployment can
+// transparently raise this work factor or rehash accounts with a stronger KDF.
+const PASSWORD_ITERATIONS = 100_000;
 const MAX_FAILED_LOGINS = 5;
 const LOCKOUT_MINUTES = 15;
 
