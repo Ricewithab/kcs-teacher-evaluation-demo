@@ -4,7 +4,8 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, BookOpenCheck, CalendarClock, CheckCircle2, ClipboardCheck, Goal, UsersRound } from "lucide-react";
 import { demoStatus, eligibleStaff, FRAMEWORK, ROLE_USERS } from "@/lib/demo-data";
 import { usePersistedDemoState, type PersistedDemoState } from "@/lib/use-demo-state";
-import { useDemoRole } from "./AppShell";
+import { ProductionDashboard } from "@/components/ProductionDashboard";
+import { useAppSession, useDemoRole } from "./AppShell";
 
 const statusClass = (value: string) => value.toLowerCase().replaceAll(" ", "-");
 const statusLabels:Record<string,string>={complete:"Complete",scheduled:"Scheduled",overdue:"Overdue",feedback_due:"Feedback due",reflection_due:"Reflection due",not_yet_due:"Not yet due",observation:"In progress",required:"Required"};
@@ -12,8 +13,10 @@ const statusLabels:Record<string,string>={complete:"Complete",scheduled:"Schedul
 type Person={id:string;name:string;position:string;division:string;department:string};
 
 export function Dashboard() {
+  const { mode } = useAppSession();
   const { role } = useDemoRole();
   const {state}=usePersistedDemoState();
+  if (mode === "production") return <ProductionDashboard/>;
   if (role === "teacher") return <TeacherDashboard state={state}/>;
   if (role === "manager") return <ManagerDashboard state={state}/>;
   if (role === "division") return <DivisionDashboard state={state}/>;
