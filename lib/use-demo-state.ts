@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiPath } from "@/lib/paths";
 
 export type PersistedDemoState = {
@@ -12,18 +12,26 @@ export type PersistedDemoState = {
   feedback: any[];
   reflections: any[];
   developmentGoals: any[];
+  auditLog: any[];
 };
 
 export function usePersistedDemoState() {
   const [state,setState]=useState<PersistedDemoState|null>(null);
   const [error,setError]=useState<Error|null>(null);
-  useEffect(()=>{
-    let active=true;
-    fetch(apiPath("/api/state"),{cache:"no-store"})
-      .then(async response=>{if(!response.ok)throw new Error("Unable to load persisted demo state");return response.json()})
-      .then(data=>{if(active)setState(data)})
-      .catch(cause=>{if(active)setError(cause instanceof Error?cause:new Error(String(cause))) });
-    return()=>{active=false};
+  const [loading,setLoading]=useState(true);
+  const refresh=useCallback(async()=>{
+    setLoading(true);
+    try{
+      const response=await fetch(apiPath("/api/state"),{cache:"no-store"});
+      if(!response.ok)throw new Error("Unable to load persisted demo state");
+      setState(await response.json());
+      setError(null);
+    }catch(cause){
+      setError(cause instanceof Error?cause:new Error(String(cause)));
+    }finally{
+      setLoading(false);
+    }
   },[]);
-  return {state,error};
+  useEffect(()=>{void refresh()},[refresh]);
+  return {state,error,loading,refresh};
 }
