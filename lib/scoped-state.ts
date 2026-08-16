@@ -1,16 +1,17 @@
 import type { SessionIdentity } from "@/lib/auth-types";
 import { getActiveFrameworkState } from "@/lib/active-framework";
 import { database } from "@/lib/database";
-import { visibleStaffIds } from "@/lib/permissions";
+import { hierarchyStaffIds, visibleStaffIds } from "@/lib/permissions";
 import { getDemoState } from "@/lib/server-store";
 
 export async function getScopedState(identity: SessionIdentity) {
   const state = await getDemoState();
-  const [activeFramework, yearsResult] = await Promise.all([
+  const [activeFramework, yearsResult, visible, operational] = await Promise.all([
     getActiveFrameworkState(),
     database().prepare("SELECT id, academic_year, is_active, archived_at FROM evaluation_frameworks ORDER BY academic_year DESC").all<any>(),
+    visibleStaffIds(identity),
+    hierarchyStaffIds(identity),
   ]);
-  const visible = await visibleStaffIds(identity);
   const evaluations = state.evaluations.filter((item: any) => visible.has(item.teacher_id) || item.evaluator_id === identity.staffId);
   const evaluationIds = new Set(evaluations.map((item: any) => item.id));
 
@@ -36,6 +37,7 @@ export async function getScopedState(identity: SessionIdentity) {
     developmentGoals: state.developmentGoals.filter((item: any) => visible.has(item.teacher_id)),
     access: {
       staffIds: [...visible],
+      operationalStaffIds: [...operational],
       systemRole: identity.systemRole,
       isSystemAdmin: identity.isSystemAdmin,
     },
