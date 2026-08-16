@@ -15,7 +15,7 @@ export type PersistedDemoState = {
   developmentGoals: any[];
   auditLog: any[];
   requirements: any[];
-  access?: { staffIds: string[]; systemRole: string; isSystemAdmin: boolean };
+  access?: { staffIds: string[]; operationalStaffIds?: string[]; systemRole: string; isSystemAdmin: boolean };
 };
 
 export function usePersistedDemoState() {
